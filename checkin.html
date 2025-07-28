@@ -1,0 +1,131 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CHOG Daily Check-In</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.6.2/dist/ethers.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Arial', sans-serif;
+      background-color: #14001f;
+      color: #f5eaff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      box-sizing: border-box;
+      text-align: center;
+      min-height: 100vh;
+    }
+
+    img.logo {
+      width: 120px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      color: #c084fc;
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      background: linear-gradient(135deg, #a855f7, #9333ea);
+      color: white;
+      font-size: 20px;
+      border: none;
+      padding: 16px 32px;
+      cursor: pointer;
+      border-radius: 12px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 12px #a855f7;
+    }
+
+    #status {
+      margin-top: 20px;
+      font-size: 16px;
+      color: #e0bbff;
+    }
+  </style>
+</head>
+<body>
+  <!-- Ganti src dengan link file logo CHOG kamu dari GitHub -->
+  <img src="https://raw.githubusercontent.com/username/repo/main/chog-logo.png" alt="CHOG Logo" class="logo" />
+
+  <h1>CHOG Daily Check-In</h1>
+  <p>Pay 0.5 MONAD to Check In and Earn Future Rewards</p>
+  <button id="checkInBtn">✅ Check In</button>
+  <p id="status"></p>
+
+  <script>
+    const RECEIVER = "0x2027e4e17f9f47b73e22f490e1f14e5c9eaaa552";
+    const FEE = "0.5";
+
+    function hasCheckedInToday(address) {
+      const today = new Date().toISOString().split('T')[0];
+      const record = localStorage.getItem(`checkin-${address}`);
+      return record === today;
+    }
+
+    function saveCheckIn(address) {
+      const today = new Date().toISOString().split('T')[0];
+      localStorage.setItem(`checkin-${address}`, today);
+    }
+
+    document.getElementById("checkInBtn").addEventListener("click", async () => {
+      if (!window.ethereum) {
+        alert("Please install MetaMask or compatible wallet");
+        return;
+      }
+
+      try {
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
+        const userAddress = await signer.getAddress();
+        const network = await provider.getNetwork();
+
+        if (network.chainId !== 0x504) {
+          alert("Please switch to the Monad network.");
+          return;
+        }
+
+        if (hasCheckedInToday(userAddress)) {
+          document.getElementById("status").innerText = "⚠️ You have already checked in today!";
+          return;
+        }
+
+        const tx = await signer.sendTransaction({
+          to: RECEIVER,
+          value: ethers.parseEther(FEE)
+        });
+
+        document.getElementById("status").innerText = "⏳ Waiting for confirmation...";
+        await tx.wait();
+
+        saveCheckIn(userAddress);
+        document.getElementById("status").innerText = "✅ Check-in successful! Redirecting...";
+        setTimeout(() => {
+          window.location.href = "https://warpcast.com/~/compose?text=I%20just%20checked%20in%20on%20CHOG%20Daily!%20%23CHOG";
+        }, 1500);
+      } catch (err) {
+        console.error(err);
+        document.getElementById("status").innerText = "❌ Transaction failed or cancelled.";
+      }
+    });
+  </script>
+</body>
+</html>
